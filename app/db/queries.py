@@ -68,7 +68,9 @@ def retrieve_memory_units(
         supabase.table("memory_units")
         .select(
             "id, title, summary, description, keywords, event_type, places, dates, "
-            "media_assets(file_name, mime_type)"
+            "media_assets(file_name, mime_type), "
+            "citations(id, kind, evidence_text, start_time_ms, end_time_ms, media_asset_id, "
+            "media_assets(id, gcs_url))"
         )
         .eq("profile_id", profile_id)
     )
