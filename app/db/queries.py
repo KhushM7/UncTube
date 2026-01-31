@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from pprint import pformat
 
+from app.api.schemas import RetrievedMemory
 from app.api.schemas import RetrievedCitation, RetrievedMemory
 from app.db.supabase_client import supabase
 
@@ -68,7 +69,7 @@ def retrieve_memory_units(
         supabase.table("memory_units")
         .select(
             "id, title, summary, description, created_at, keywords, event_type, places, dates, "
-            "media_assets(file_name, mime_type), "
+            "media_assets(file_name, mime_type)"
             "citations(id, kind, evidence_text, start_time_ms, end_time_ms, media_asset_id, "
             "media_assets(id, gcs_url))"
         )
