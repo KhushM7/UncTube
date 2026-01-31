@@ -129,9 +129,7 @@ def retrieve_memory_units(
         ).lower()
         keyword_hits = sum(text_blob.count(keyword.lower()) for keyword in keywords)
         keyword_hits += len(set(memory.keywords) & set(keywords)) * 2
-        created_at = _parse_datetime(memory.created_at)
-        recency = created_at.timestamp() / 1e10 if created_at else 0.0
-        return keyword_hits + recency
+        return keyword_hits
 
     retrieved.sort(key=score_memory, reverse=True)
     return retrieved[:top_k]
