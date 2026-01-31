@@ -5,7 +5,9 @@ from datetime import datetime
 from pprint import pformat
 
 from app.api.schemas import RetrievedCitation, RetrievedMemory
-from app.db.supabase import supabase
+from app.db.supabase_client import supabase
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
