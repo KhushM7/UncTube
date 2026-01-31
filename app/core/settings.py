@@ -6,7 +6,7 @@ load_dotenv()
 
 class Settings:
     # =========================
-    # AWS / S3 (your existing setup)
+    # AWS / S3
     # =========================
     AWS_ACCESS_KEY_ID: str = getenv("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY: str = getenv("AWS_SECRET_ACCESS_KEY")
