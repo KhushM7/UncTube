@@ -57,6 +57,7 @@ STOPWORDS = {
     "who",
     "why",
     "how",
+    "did",
 }
 
 EVENT_TYPE_MAP = {
