@@ -1,12 +1,15 @@
 """
 ElevenLabs service for voice cloning and text-to-speech
 """
-from elevenlabs.client import ElevenLabs
-from elevenlabs import VoiceSettings
-from .config import Config
 import os
 import base64
 import io
+from types import SimpleNamespace
+import requests
+
+from elevenlabs.client import ElevenLabs
+from elevenlabs import VoiceSettings
+from .config import Config
 
 
 class ElevenLabsService:
