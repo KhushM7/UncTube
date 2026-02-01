@@ -6,7 +6,7 @@ import requests
 from test_e2e_helpers import add_server_args
 
 
-DEFAULT_QUESTION = "Why did you move to London?"
+DEFAULT_QUESTION = "How did you improve your fitness in the gym?"
 
 
 def main() -> None:

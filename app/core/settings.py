@@ -13,7 +13,6 @@ class Settings:
     AWS_REGION: str = getenv("AWS_REGION")
     AWS_S3_BUCKET: str = getenv("AWS_S3_BUCKET")
     AWS_S3_ENDPOINT_URL: str = getenv("AWS_S3_ENDPOINT_URL")
-    AWS_S3_PUBLIC_BASE_URL: str = getenv("AWS_S3_PUBLIC_BASE_URL")
 
     # =========================
     # Gemini (LLM)

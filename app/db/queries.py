@@ -10,35 +10,21 @@ from app.db.supabase_client import supabase
 logger = logging.getLogger(__name__)
 
 
-def _apply_text_search(query, keywords: list[str]):
+def _apply_keyword_filters(query, keywords: list[str]):
     if not keywords:
         return query
-    ts_query = " | ".join(keywords)
-    try:
-        return query.text_search("search_vector", ts_query, config="english")
-    except Exception:
-        or_clauses = []
-        for keyword in keywords:
-            or_clauses.extend(
-                [
-                    f"title.ilike.%{keyword}%",
-                    f"summary.ilike.%{keyword}%",
-                    f"description.ilike.%{keyword}%",
-                ]
-            )
-        if or_clauses:
-            return query.or_(",".join(or_clauses))
-    return query
-
-
-def _apply_keyword_overlap(query, keywords: list[str]):
-    if not keywords:
-        return query
+    or_clauses = []
+    for keyword in keywords:
+        or_clauses.extend(
+            [
+                f"title.ilike.%{keyword}%",
+                f"summary.ilike.%{keyword}%",
+                f"description.ilike.%{keyword}%",
+            ]
+        )
     keyword_set = ",".join(keywords)
-    try:
-        return query.or_(f"keywords.cs.{{{keyword_set}}}")
-    except Exception:
-        return query.contains("keywords", keywords)
+    or_clauses.append(f"keywords.ov.{{{keyword_set}}}")
+    return query.or_(",".join(or_clauses))
 
 
 def _apply_event_type_filter(query, event_types: list[str]):
@@ -84,8 +70,7 @@ def retrieve_memory_units(
         .eq("profile_id", profile_id)
     )
 
-    query = _apply_text_search(query, keywords)
-    query = _apply_keyword_overlap(query, keywords)
+    query = _apply_keyword_filters(query, keywords)
     query = _apply_event_type_filter(query, event_types)
 
     response = query.execute()

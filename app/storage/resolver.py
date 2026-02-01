@@ -66,19 +66,13 @@ def resolve_public_url(key: str) -> str:
     Converts an S3 key to a publicly accessible URL.
 
     Priority:
-    1. If AWS_S3_PUBLIC_BASE_URL is set, use it (for public buckets)
-    2. Otherwise, generate a presigned URL (temporary, works for private buckets)
-    3. Fallback to s3:// URI if all else fails
+    1. Generate a presigned URL (temporary, works for private buckets)
+    2. Fallback to s3:// URI if all else fails
     """
     if not key:
         return ""
 
-    # First priority: use public base URL if configured
-    base_url = settings.AWS_S3_PUBLIC_BASE_URL or ""
-    if base_url:
-        return f"{base_url.rstrip('/')}/{key.lstrip('/')}"
-
-    # Second priority: generate presigned URL
+    # First priority: generate presigned URL
     from app.core.data_extraction import _s3_client
     try:
         s3_client = _s3_client()
