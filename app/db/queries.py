@@ -36,9 +36,9 @@ def _apply_keyword_overlap(query, keywords: list[str]):
         return query
     keyword_set = ",".join(keywords)
     try:
-        return query.or_(f"keywords.cs.{{{keyword_set}}}")
+        return query.or_(f"keywords_array.cs.{{{keyword_set}}}")  # Changed keywords to keywords_array
     except Exception:
-        return query.contains("keywords", keywords)
+        return query.contains("keywords_array", keywords)  # Changed keywords to keywords_array
 
 
 def _apply_event_type_filter(query, event_types: list[str]):
@@ -67,14 +67,14 @@ def retrieve_memory_units(
     query = (
         supabase.table("memory_units")
         .select(
-            "id, title, summary, description, keywords, event_type, places, dates, "
+            "id, title, summary, description, keywords_array, event_type, places, dates, "  # Changed keywords to keywords_array
             "media_assets(file_name, mime_type)"
         )
         .eq("profile_id", profile_id)
     )
 
     query = _apply_text_search(query, keywords)
-    query = _apply_keyword_overlap(query, keywords)
+    query = _apply_keyword_overlap(query, keywords)  # This function also needs updating
     query = _apply_event_type_filter(query, event_types)
 
     response = query.execute()
@@ -98,7 +98,7 @@ def retrieve_memory_units(
                 event_type=row.get("event_type"),
                 places=row.get("places") or [],
                 dates=row.get("dates") or [],
-                keywords=row.get("keywords") or [],
+                keywords=row.get("keywords_array") or [],  # Changed keywords to keywords_array
                 asset_key=media_asset.get("file_name"),
                 asset_mime_type=media_asset.get("mime_type"),
             )
