@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -102,3 +103,15 @@ class RetrievedMemory(BaseModel):
 class ContextPack(BaseModel):
     question: str
     memories: list[dict]
+
+
+class ProfileCreateRequest(BaseModel):
+    profile_id: Optional[str] = None
+    name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+
+
+class ProfileOut(BaseModel):
+    id: str
+    name: Optional[str] = None
+    date_of_birth: Optional[date] = None

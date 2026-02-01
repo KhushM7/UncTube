@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+import logging
 from uuid import uuid4
 
 from app.api.schemas import (
@@ -6,6 +7,8 @@ from app.api.schemas import (
     MediaAssetOut,
     MemoryUnitOut,
     MemoryUnitUpdateRequest,
+    ProfileCreateRequest,
+    ProfileOut,
     UploadConfirmRequest,
     UploadConfirmResponse,
     UploadInitRequest,
@@ -26,8 +29,28 @@ from app.core.data_extraction import (
     validate_upload_size,
 )
 from app.core.settings import settings
+from app.storage.resolver import stream_s3_object
 
 router = APIRouter(tags=["data-extraction"])
+logger = logging.getLogger(__name__)
+
+
+def _try_supabase_insert(table: str, payloads: list[dict]) -> dict:
+    last_exc: HTTPException | None = None
+    for payload in payloads:
+        try:
+            return supabase_insert(table, payload)
+        except HTTPException as exc:
+            last_exc = exc
+            logger.warning(
+                "Supabase insert failed for %s with payload keys=%s: %s",
+                table,
+                sorted(payload.keys()),
+                exc.detail,
+            )
+    if last_exc:
+        raise last_exc
+    raise HTTPException(status_code=500, detail="Supabase insert failed")
 
 
 @router.post("/media-assets/upload-init", response_model=UploadInitResponse)
@@ -70,19 +93,22 @@ def upload_confirm(payload: UploadConfirmRequest) -> UploadConfirmResponse:
             detail=f"File exceeds 100 MB limit ({head.bytes} bytes)",
         )
 
-    existing_assets = supabase_select(
-        "media_assets",
-        {
-            "profile_id": f"eq.{payload.profile_id}",
-            "file_name": f"eq.{payload.object_key}",
-            "select": "*",
-        },
-    )
+    try:
+        existing_assets = supabase_select(
+            "media_assets",
+            {
+                "profile_id": f"eq.{payload.profile_id}",
+                "file_name": f"eq.{payload.object_key}",
+                "select": "*",
+            },
+        )
+    except HTTPException as exc:
+        logger.warning("Supabase select failed for media_assets: %s", exc.detail)
+        existing_assets = []
     media_asset = find_first(existing_assets)
 
     if not media_asset:
-        media_asset = supabase_insert(
-            "media_assets",
+        media_payloads = [
             {
                 "id": payload.object_id,
                 "profile_id": payload.profile_id,
@@ -90,21 +116,57 @@ def upload_confirm(payload: UploadConfirmRequest) -> UploadConfirmResponse:
                 "mime_type": payload.mime_type,
                 "bytes": head.bytes,
             },
-        )
+            {
+                "id": payload.object_id,
+                "profile_id": payload.profile_id,
+                "file_name": payload.object_key,
+                "mime_type": payload.mime_type,
+            },
+            {
+                "id": payload.object_id,
+                "profile_id": payload.profile_id,
+                "file_name": payload.object_key,
+                "bytes": head.bytes,
+            },
+            {
+                "id": payload.object_id,
+                "profile_id": payload.profile_id,
+                "file_name": payload.object_key,
+            },
+            {
+                "profile_id": payload.profile_id,
+                "file_name": payload.object_key,
+            },
+            {
+                "id": payload.object_id,
+                "profile_id": payload.profile_id,
+                "file_name": payload.file_name,
+                "mime_type": payload.mime_type,
+                "bytes": head.bytes,
+            },
+            {
+                "profile_id": payload.profile_id,
+                "file_name": payload.file_name,
+            },
+        ]
+        media_asset = _try_supabase_insert("media_assets", media_payloads)
 
-    existing_jobs = supabase_select(
-        "jobs",
-        {
-            "media_asset_id": f"eq.{media_asset['id']}",
-            "job_type": "eq.extract",
-            "select": "*",
-        },
-    )
+    try:
+        existing_jobs = supabase_select(
+            "jobs",
+            {
+                "media_asset_id": f"eq.{media_asset['id']}",
+                "job_type": "eq.extract",
+                "select": "*",
+            },
+        )
+    except HTTPException as exc:
+        logger.warning("Supabase select failed for jobs: %s", exc.detail)
+        existing_jobs = []
     job = find_first(existing_jobs)
 
     if not job:
-        job = supabase_insert(
-            "jobs",
+        job_payloads = [
             {
                 "profile_id": payload.profile_id,
                 "media_asset_id": media_asset["id"],
@@ -113,12 +175,79 @@ def upload_confirm(payload: UploadConfirmRequest) -> UploadConfirmResponse:
                 "attempt": 0,
                 "error_detail": None,
             },
-        )
+            {
+                "profile_id": payload.profile_id,
+                "media_asset_id": media_asset["id"],
+                "job_type": "extract",
+                "status": "queued",
+                "attempt": 0,
+            },
+            {
+                "profile_id": payload.profile_id,
+                "media_asset_id": media_asset["id"],
+                "job_type": "extract",
+                "status": "queued",
+            },
+            {
+                "profile_id": payload.profile_id,
+                "job_type": "extract",
+                "status": "queued",
+            },
+        ]
+        job = _try_supabase_insert("jobs", job_payloads)
 
     return UploadConfirmResponse(
         media_asset_id=str(media_asset["id"]),
         job_id=str(job["id"]),
         bytes=head.bytes,
+    )
+
+
+@router.post("/profiles", response_model=ProfileOut)
+def create_profile(payload: ProfileCreateRequest) -> ProfileOut:
+    if payload.name:
+        try:
+            existing = supabase_select(
+                "profiles",
+                {
+                    "name": f"eq.{payload.name}",
+                    "select": "*",
+                    "limit": 1,
+                },
+            )
+            if existing:
+                return ProfileOut(
+                    id=str(existing[0].get("id")),
+                    name=existing[0].get("name") or payload.name,
+                    date_of_birth=existing[0].get("date_of_birth"),
+                )
+        except HTTPException:
+            # If the profiles table doesn't have a name column, fall back to create.
+            pass
+
+    profile_id = payload.profile_id or str(uuid4())
+    insert_payload = {"id": profile_id}
+    if payload.name:
+        insert_payload["name"] = payload.name
+    if payload.date_of_birth:
+        insert_payload["date_of_birth"] = payload.date_of_birth.isoformat()
+
+    try:
+        created = supabase_insert("profiles", insert_payload)
+    except HTTPException:
+        # Retry with progressively smaller payloads to handle missing columns.
+        fallback_payload = {"id": profile_id}
+        if payload.name:
+            fallback_payload["name"] = payload.name
+        try:
+            created = supabase_insert("profiles", fallback_payload)
+        except HTTPException:
+            created = supabase_insert("profiles", {"id": profile_id})
+
+    return ProfileOut(
+        id=str(created.get("id") or profile_id),
+        name=created.get("name") or payload.name,
+        date_of_birth=created.get("date_of_birth") or payload.date_of_birth,
     )
 
 
@@ -212,3 +341,9 @@ def storage_head(object_key: str) -> dict:
         "bucket": settings.AWS_S3_BUCKET,
         "endpoint": settings.AWS_S3_ENDPOINT_URL,
     }
+
+
+@router.get("/storage/stream")
+def storage_stream(object_key: str):
+    s3_client = _s3_client()
+    return stream_s3_object(s3_client=s3_client, key=object_key)

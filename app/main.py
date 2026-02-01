@@ -2,6 +2,7 @@ import logging
 from os import getenv
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.extraction_worker import ExtractionWorker
@@ -20,6 +21,13 @@ app = FastAPI(
     version=settings.VERSION
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

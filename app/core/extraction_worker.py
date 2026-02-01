@@ -271,7 +271,7 @@ class ExtractionWorker:
                     "event_type": unit.event_type,
                     "places": unit.places,
                     "dates": unit.dates,
-                    "keywords_array": unit.keywords_array,
+                    "keywords": unit.keywords,
                 }
             )
         return ExtractionResult(memory_units=memory_units)

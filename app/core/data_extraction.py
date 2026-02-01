@@ -153,13 +153,26 @@ def create_presigned_download_url(object_key: str) -> str:
 
 
 def build_public_url(object_key: str) -> str:
-    base = settings.AWS_S3_PUBLIC_BASE_URL
-    if not base:
+    if not object_key:
         return ""
-    base = base.rstrip("/")
-    if not base.startswith(("http://", "https://")):
-        base = f"https://{base}"
-    return f"{base}/{object_key}"
+
+    bucket = settings.AWS_S3_BUCKET or ""
+    endpoint = (settings.AWS_S3_ENDPOINT_URL or "").rstrip("/")
+    if endpoint:
+        if not endpoint.startswith(("http://", "https://")):
+            endpoint = f"https://{endpoint}"
+        if bucket:
+            return f"{endpoint}/{bucket}/{object_key}"
+        return f"{endpoint}/{object_key}"
+
+    region = settings.AWS_REGION or ""
+    if bucket and region:
+        return f"https://{bucket}.s3.{region}.amazonaws.com/{object_key}"
+    if bucket:
+        return f"https://{bucket}.s3.amazonaws.com/{object_key}"
+    return ""
+
+
 def head_object(object_key: str) -> UploadHead:
     client = _s3_client()
     bucket = _require_setting(settings.AWS_S3_BUCKET, "AWS_S3_BUCKET")
