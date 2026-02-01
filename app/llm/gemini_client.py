@@ -92,7 +92,7 @@ class GeminiClient:
             config={
                 "system_instruction": KEYWORD_MATCH_SYSTEM_PROMPT,
                 "response_mime_type": "application/json",
-                "temperature": 0.2,
+                "temperature": 0,
             },
         )
 

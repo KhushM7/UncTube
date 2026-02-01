@@ -115,7 +115,18 @@ def _match_keywords_with_gemini(
         canonical = existing_map.get(keyword.strip().lower())
         if canonical:
             resolved.append(canonical)
-    return _normalize_keywords(resolved)
+    if not resolved:
+        return []
+    resolved_normalized = _normalize_keywords(resolved)
+    question_terms = set(re.findall(r"[a-zA-Z0-9']+", question.lower()))
+    strict_matches = []
+    for keyword in resolved_normalized:
+        kw_terms = re.findall(r"[a-zA-Z0-9']+", keyword.lower())
+        if not kw_terms:
+            continue
+        if any(term in question_terms for term in kw_terms):
+            strict_matches.append(keyword)
+    return strict_matches
 
 
 def extract_keywords(

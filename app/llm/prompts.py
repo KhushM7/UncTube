@@ -31,10 +31,11 @@ Existing keywords (JSON array):
 
 Task:
 1) Infer up to {top_n} short keywords/phrases from the question (lowercase, 1-3 words).
-2) From the existing keywords list, select those that are exact or close semantic matches.
+2) From the existing keywords list, select only those that are exact matches or near-exact matches (same root/lemma).
 
 Rules:
 - Output keywords MUST be items from the existing list.
+- Do NOT return broad or loosely related terms.
 - Return JSON only: {{"keywords": []}}
 """
 

@@ -51,3 +51,6 @@ websockets==15.0.1
 yarl==1.22.0
 
 supabase
+google-genai
+python-dotenv
+uvicorn

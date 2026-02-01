@@ -38,6 +38,11 @@ class Settings:
     # =========================
     DEFAULT_TOP_K: int = int(getenv("DEFAULT_TOP_K", "8"))
 
+    # =========================
+    # CORS
+    # =========================
+    CORS_ALLOW_ORIGINS: str = getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000")
+
 
 
 settings = Settings()

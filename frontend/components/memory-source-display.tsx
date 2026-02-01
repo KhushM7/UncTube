@@ -102,6 +102,7 @@ export function MemorySourceDisplay({
   className,
 }: MemorySourceDisplayProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const resolvedSources = useMemo(
     () => (sources || []).map((source) => resolveSourceUrl(source)),
@@ -141,20 +142,24 @@ export function MemorySourceDisplay({
     <div className={cn("relative w-full h-52 sm:h-60 md:h-64", className)}>
       {visualItems.map((item, index) => {
         const preset = positionPresets[index % positionPresets.length];
+        const isHovered = hoveredIndex === index;
         return (
           <div
             key={`${item.url}-${index}`}
             className={cn(
               "absolute rounded-2xl border border-amber-200/20 bg-stone-950/40 shadow-2xl shadow-amber-900/20 backdrop-blur-sm overflow-hidden",
-              "transition-opacity duration-1000 ease-out",
+              "transition-all duration-500 ease-out",
+              isHovered ? "z-30" : "z-10",
               isVisible ? "opacity-100" : "opacity-0",
               preset.size
             )}
             style={{
               top: preset.top,
               left: preset.left,
-              transform: `translate(-10%, 0) rotate(${preset.rotate})`,
+              transform: `translate(-10%, 0) rotate(${preset.rotate}) scale(${isHovered ? 1.05 : 1})`,
             }}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
           >
             {item.type === "photo" && (
               // eslint-disable-next-line @next/next/no-img-element
