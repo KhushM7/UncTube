@@ -3,9 +3,9 @@ from os import getenv
 
 from fastapi import FastAPI
 
-from api.main import api_router
-from core.extraction_worker import ExtractionWorker
-from core.settings import settings
+from app.api.main import api_router
+from app.core.extraction_worker import ExtractionWorker
+from app.core.settings import settings
 
 worker = ExtractionWorker()
 

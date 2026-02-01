@@ -11,7 +11,7 @@ import io
 from botocore.exceptions import ClientError
 from fastapi import HTTPException, status
 
-from core.settings import settings
+from app.core.settings import settings
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 

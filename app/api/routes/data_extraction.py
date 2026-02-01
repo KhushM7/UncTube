@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from uuid import uuid4
 
-from api.schemas import (
+from app.api.schemas import (
     JobOut,
     MediaAssetOut,
     MemoryUnitOut,
@@ -11,7 +11,7 @@ from api.schemas import (
     UploadInitRequest,
     UploadInitResponse,
 )
-from core.data_extraction import (
+from app.core.data_extraction import (
     MAX_UPLOAD_BYTES,
     build_object_key,
     create_presigned_upload_url,
@@ -25,7 +25,7 @@ from core.data_extraction import (
     validate_file_type,
     validate_upload_size,
 )
-from core.settings import settings
+from app.core.settings import settings
 
 router = APIRouter(tags=["data-extraction"])
 
