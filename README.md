@@ -1,5 +1,5 @@
 # Heirloom
-
+By Khush Mehta and Ethan Olchik
 ## Overview
 Heirloom is a full‑stack web application that lets families preserve multimedia memories (photos, letters, audio, and video), extract structured “memory units” from those artifacts using Gemini, and then ask questions that are answered with grounded responses and personal voice synthesis via ElevenLabs. The system is designed to feel like a living archive: upload artifacts, let the backend extract structured memories, then ask questions and hear replies spoken aloud in the voice of the person it is describing.
 
