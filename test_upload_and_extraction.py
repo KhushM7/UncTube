@@ -5,13 +5,7 @@ from pathlib import Path
 
 import requests
 
-from test_e2e_helpers import (
-    add_server_args,
-    parse_list,
-    prompt_if_missing,
-    start_server,
-    wait_for_server,
-)
+from test_e2e_helpers import add_server_args, parse_list, prompt_if_missing
 
 
 def main() -> None:
@@ -40,12 +34,6 @@ def main() -> None:
     description = prompt_if_missing(args.description, "Description")
     places = parse_list(args.place, "Places")
     dates = parse_list(args.date, "Dates")
-
-    server_process = None
-    if not args.no_server:
-        server_process = start_server(args)
-    else:
-        wait_for_server(args.api, args.server_timeout)
 
     try:
         init_payload = {
@@ -135,9 +123,7 @@ def main() -> None:
             )
         )
     finally:
-        if server_process:
-            server_process.terminate()
-            server_process.wait(timeout=10)
+        pass
 
 
 if __name__ == "__main__":

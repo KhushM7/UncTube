@@ -3,7 +3,7 @@ import json
 
 import requests
 
-from test_e2e_helpers import add_server_args, start_server, wait_for_server
+from test_e2e_helpers import add_server_args
 
 
 DEFAULT_QUESTION = "Why did you move to London?"
@@ -22,12 +22,6 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    server_process = None
-    if not args.no_server:
-        server_process = start_server(args)
-    else:
-        wait_for_server(args.api, args.server_timeout)
-
     try:
         ask_payload = {"question": args.question}
         ask_resp = requests.post(
@@ -40,9 +34,7 @@ def main() -> None:
 
         print(json.dumps(ask_data, indent=2))
     finally:
-        if server_process:
-            server_process.terminate()
-            server_process.wait(timeout=10)
+        pass
 
 
 if __name__ == "__main__":

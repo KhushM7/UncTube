@@ -89,7 +89,7 @@ class GeminiClient:
             )
         )
         json_payload = _extract_json(response.text or "")
-        units = _parse_units(json_payload)
+        units = _parse_units(json_payload, response.text or "")
         return _normalize_units(units, modality)
 
     def extract(self, file_path: str, mime_type: str, modality: str) -> List[ExtractedUnit]:
@@ -117,7 +117,7 @@ class GeminiClient:
                 pass
 
         json_payload = _extract_json(response.text or "")
-        units = _parse_units(json_payload)
+        units = _parse_units(json_payload, response.text or "")
         return _normalize_units(units, modality)
 
     def transcribe_media(self, file_path: str, modality: str) -> str:
@@ -208,37 +208,64 @@ def _parse_json_response(text: str) -> dict | None:
             return None
 
 
-def _extract_json(text: str) -> Dict[str, Any]:
+def _extract_json(text: str) -> Any:
     """Extract JSON payload from Gemini response text."""
     if not text:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Gemini returned empty response",
         )
+    
+    # Try to parse the entire response as JSON first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    
+    # Try to find JSON object in the text
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end <= start:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Gemini response missing JSON payload",
+            detail=f"Gemini response missing JSON payload. Response text: {text[:500]}",
         )
     try:
         return json.loads(text[start : end + 1])
     except json.JSONDecodeError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Gemini response JSON could not be parsed",
+            detail=f"Gemini response JSON could not be parsed. Response text: {text[:500]}",
         ) from exc
 
 
-def _parse_units(payload: Dict[str, Any]) -> List[ExtractedUnit]:
+def _parse_units(payload: Any, raw_text: str = "") -> List[ExtractedUnit]:
     """Parse memory units from JSON payload."""
-    raw_units = payload.get("memory_units")
+    raw_units: Any = None
+    if isinstance(payload, list):
+        raw_units = payload
+    elif isinstance(payload, dict):
+        raw_units = payload.get("memory_units")
+        if raw_units is None:
+            for alt_key in ("memory_unit", "memoryUnits", "units", "memories"):
+                if alt_key in payload:
+                    raw_units = payload[alt_key]
+                    break
+        if raw_units is None and ("title" in payload or "summary" in payload):
+            raw_units = [payload]
+
+    if isinstance(raw_units, dict):
+        raw_units = [raw_units]
+
     if not isinstance(raw_units, list):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Gemini response missing memory_units",
+            detail=(
+                "Gemini response missing memory_units. "
+                f"Payload type: {type(payload)}. Raw text: {raw_text[:500]}"
+            ),
         )
+    
     units: List[ExtractedUnit] = []
     for item in raw_units:
         if not isinstance(item, dict):
