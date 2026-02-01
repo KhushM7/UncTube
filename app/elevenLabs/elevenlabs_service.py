@@ -1,9 +1,7 @@
 """
 ElevenLabs service for voice cloning and text-to-speech
 """
-from elevenlabs.client import ElevenLabs
-from elevenlabs import VoiceSettings
-from config import Config
+from .config import Config
 import os
 import base64
 import io
@@ -14,7 +12,11 @@ class ElevenLabsService:
 
     def __init__(self):
         """Initialize ElevenLabs client"""
+        from elevenlabs.client import ElevenLabs
+        from elevenlabs import VoiceSettings
+
         self.client = ElevenLabs(api_key=Config.ELEVENLABS_API_KEY)
+        self.voice_settings_class = VoiceSettings
 
     def clone_voice_from_bytes(self, voice_name: str, audio_data_list: list, description: str = "") -> str:
         """
@@ -154,7 +156,7 @@ class ElevenLabsService:
                 text=text,
                 voice=voice_id,
                 model="eleven_multilingual_v2",  # Best model for cloned voices
-                voice_settings=VoiceSettings(
+                voice_settings=self.voice_settings_class(
                     stability=0.5,
                     similarity_boost=0.75,
                     style=0.0,
@@ -190,7 +192,7 @@ class ElevenLabsService:
                 text=text,
                 voice=voice_id,
                 model="eleven_multilingual_v2",
-                voice_settings=VoiceSettings(
+                voice_settings=self.voice_settings_class(
                     stability=0.5,
                     similarity_boost=0.75,
                     style=0.0,
