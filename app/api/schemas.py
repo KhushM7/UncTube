@@ -57,6 +57,13 @@ class MemoryUnitOut(BaseModel):
     keywords_array: Optional[List[str]] = None  # Added from File 2
 
 
+class MemoryUnitUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    places: Optional[List[str]] = None
+    dates: Optional[List[str]] = None
+
+
 class JobOut(BaseModel):  # Added from File 2
     id: str
     profile_id: str

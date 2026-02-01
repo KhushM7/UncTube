@@ -5,6 +5,7 @@ from api.schemas import (
     JobOut,
     MediaAssetOut,
     MemoryUnitOut,
+    MemoryUnitUpdateRequest,
     UploadConfirmRequest,
     UploadConfirmResponse,
     UploadInitRequest,
@@ -20,6 +21,7 @@ from core.data_extraction import (
     _s3_client,
     supabase_insert,
     supabase_select,
+    supabase_update,
     validate_file_type,
     validate_upload_size,
 )
@@ -145,6 +147,27 @@ def list_memory_units(media_asset_id: str) -> list[MemoryUnitOut]:
         },
     )
     return [MemoryUnitOut(**unit) for unit in memory_units]
+
+
+@router.patch(
+    "/media-assets/{media_asset_id}/memory-units",
+    response_model=list[MemoryUnitOut],
+)
+def update_memory_units(
+    media_asset_id: str, payload: MemoryUnitUpdateRequest
+) -> list[MemoryUnitOut]:
+    update_payload = payload.model_dump(exclude_unset=True)
+    if not update_payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided for update",
+        )
+    updated = supabase_update(
+        "memory_units",
+        update_payload,
+        {"media_asset_id": f"eq.{media_asset_id}"},
+    )
+    return [MemoryUnitOut(**unit) for unit in updated]
 
 
 @router.get("/profiles/{profile_id}/jobs", response_model=list[JobOut])
