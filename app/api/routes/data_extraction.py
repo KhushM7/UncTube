@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
+from uuid import uuid4
 
-from app.api.schemas import (
+from api.schemas import (
+    JobOut,
     MediaAssetOut,
     MemoryUnitOut,
     UploadConfirmRequest,
@@ -8,18 +10,20 @@ from app.api.schemas import (
     UploadInitRequest,
     UploadInitResponse,
 )
-from app.core.data_extraction import (
+from core.data_extraction import (
     MAX_UPLOAD_BYTES,
     build_object_key,
     create_presigned_upload_url,
     delete_object,
     find_first,
     head_object,
+    _s3_client,
     supabase_insert,
     supabase_select,
     validate_file_type,
     validate_upload_size,
 )
+from core.settings import settings
 
 router = APIRouter(tags=["data-extraction"])
 
@@ -29,12 +33,14 @@ def upload_init(payload: UploadInitRequest) -> UploadInitResponse:
     validate_upload_size(payload.bytes)
     validate_file_type(payload.file_name, payload.mime_type)
 
-    object_key = build_object_key(payload.profile_id, payload.file_name)
+    object_id = uuid4().hex
+    object_key = build_object_key(payload.profile_id, payload.file_name, object_id)
     upload_url = create_presigned_upload_url(object_key, payload.mime_type)
 
     return UploadInitResponse(
         upload_url=upload_url,
         object_key=object_key,
+        object_id=object_id,
         expires_in=3600,
         max_bytes=MAX_UPLOAD_BYTES,
     )
@@ -44,12 +50,22 @@ def upload_init(payload: UploadInitRequest) -> UploadInitResponse:
 def upload_confirm(payload: UploadConfirmRequest) -> UploadConfirmResponse:
     validate_file_type(payload.file_name, payload.mime_type)
 
+    if payload.object_id:
+        expected_key = build_object_key(
+            payload.profile_id, payload.file_name, payload.object_id
+        )
+        if expected_key != payload.object_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="object_key does not match expected naming scheme",
+            )
+
     head = head_object(payload.object_key)
     if head.bytes > MAX_UPLOAD_BYTES:
         delete_object(payload.object_key)
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File exceeds 500 MB limit ({head.bytes} bytes)",
+            detail=f"File exceeds 100 MB limit ({head.bytes} bytes)",
         )
 
     existing_assets = supabase_select(
@@ -66,6 +82,7 @@ def upload_confirm(payload: UploadConfirmRequest) -> UploadConfirmResponse:
         media_asset = supabase_insert(
             "media_assets",
             {
+                "id": payload.object_id,
                 "profile_id": payload.profile_id,
                 "file_name": payload.object_key,
                 "mime_type": payload.mime_type,
@@ -125,7 +142,50 @@ def list_memory_units(media_asset_id: str) -> list[MemoryUnitOut]:
         {
             "media_asset_id": f"eq.{media_asset_id}",
             "select": "*",
-            "order": "id.desc",
         },
     )
     return [MemoryUnitOut(**unit) for unit in memory_units]
+
+
+@router.get("/profiles/{profile_id}/jobs", response_model=list[JobOut])
+def list_jobs(profile_id: str) -> list[JobOut]:
+    jobs = supabase_select(
+        "jobs",
+        {
+            "profile_id": f"eq.{profile_id}",
+            "select": "*",
+            "order": "created_at.desc",
+        },
+    )
+    return [JobOut(**job) for job in jobs]
+
+
+@router.get("/jobs/{job_id}", response_model=JobOut)
+def get_job(job_id: str) -> JobOut:
+    jobs = supabase_select(
+        "jobs",
+        {"id": f"eq.{job_id}", "select": "*", "limit": 1},
+    )
+    if not jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JobOut(**jobs[0])
+
+
+@router.get("/storage/head")
+def storage_head(object_key: str) -> dict:
+    try:
+        head = head_object(object_key)
+    except HTTPException as exc:
+        return {
+            "ok": False,
+            "error": exc.detail,
+            "bucket": settings.AWS_S3_BUCKET,
+            "endpoint": settings.AWS_S3_ENDPOINT_URL,
+        }
+    return {
+        "ok": True,
+        "bytes": head.bytes,
+        "content_type": head.content_type,
+        "bucket": settings.AWS_S3_BUCKET,
+        "endpoint": settings.AWS_S3_ENDPOINT_URL,
+    }

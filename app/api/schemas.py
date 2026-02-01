@@ -15,12 +15,14 @@ class UploadInitRequest(BaseModel):
 class UploadInitResponse(BaseModel):
     upload_url: str
     object_key: str
+    object_id: str  # Added from File 2
     expires_in: int
     max_bytes: int
 
 
 class UploadConfirmRequest(BaseModel):
     profile_id: str
+    object_id: Optional[str] = None  # Added from File 2
     object_key: str
     file_name: str
     mime_type: str
@@ -45,13 +47,27 @@ class MemoryUnitOut(BaseModel):
     id: str
     profile_id: str
     media_asset_id: str
-    title: str
-    summary: str
+    title: Optional[str] = None  # Made optional from File 2
+    summary: Optional[str] = None  # Made optional from File 2
     description: Optional[str] = None
     event_type: Optional[str] = None
-    places: List[str]
-    dates: List[str]
-    keywords: List[str]
+    places: Optional[List[str]] = None  # Made optional from File 2
+    dates: Optional[List[str]] = None  # Made optional from File 2
+    keywords: List[str]  # Kept from File 1
+    keywords_array: Optional[List[str]] = None  # Added from File 2
+
+
+class JobOut(BaseModel):  # Added from File 2
+    id: str
+    profile_id: str
+    media_asset_id: Optional[str] = None
+    job_type: str
+    status: str
+    attempt: int
+    error_detail: Optional[str] = None
+    created_at: Optional[str] = None
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
 
 
 class AskRequest(BaseModel):
@@ -60,20 +76,21 @@ class AskRequest(BaseModel):
 
 class AskResponse(BaseModel):
     answer_text: str
-    source_urls: list[str]
+    source_urls: list[str]  # Kept from File 1
 
 
 class RetrievedMemory(BaseModel):
     memory_unit_id: str
-    title: str
-    summary: str
+    title: str | None = None  # Made optional from File 2
+    summary: str | None = None  # Made optional from File 2
     description: str | None = None
-    event_type: str | None = None
-    places: list[str] = Field(default_factory=list)
-    dates: list[str] = Field(default_factory=list)
-    keywords: list[str] = Field(default_factory=list)
-    asset_key: str | None = None
-    asset_mime_type: str | None = None
+    event_type: str | None = None  # Kept from File 1
+    places: list[str] = Field(default_factory=list)  # Kept from File 1
+    dates: list[str] = Field(default_factory=list)  # Kept from File 1
+    keywords: list[str] = Field(default_factory=list)  # Kept from File 1
+    keywords_array: list[str] = Field(default_factory=list)  # Added from File 2
+    asset_key: str | None = None  # Kept from File 1
+    asset_mime_type: str | None = None  # Kept from File 1
 
 
 class ContextPack(BaseModel):

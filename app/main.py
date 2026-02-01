@@ -5,7 +5,6 @@ from fastapi import FastAPI
 
 from app.api.main import api_router
 from app.core.extraction_worker import ExtractionWorker
-
 from app.core.settings import settings
 
 worker = ExtractionWorker()
@@ -23,3 +22,23 @@ app = FastAPI(
 
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.get("/api/v1/worker/status")
+def worker_status() -> dict:
+    """Get the current status of the extraction worker."""
+    return worker.status()
+
+
+@app.post("/api/v1/worker/start")
+def worker_start() -> dict:
+    """Start the extraction worker."""
+    worker.start()
+    return worker.status()
+
+
+@app.post("/api/v1/worker/stop")
+def worker_stop() -> dict:
+    """Stop the extraction worker."""
+    worker.stop()
+    return worker.status()

@@ -36,9 +36,9 @@ def _apply_keyword_overlap(query, keywords: list[str]):
         return query
     keyword_set = ",".join(keywords)
     try:
-        return query.or_(f"keywords_array.cs.{{{keyword_set}}}")  # Changed keywords to keywords_array
+        return query.or_(f"keywords_array.cs.{{{keyword_set}}}")
     except Exception:
-        return query.contains("keywords_array", keywords)  # Changed keywords to keywords_array
+        return query.contains("keywords_array", keywords)
 
 
 def _apply_event_type_filter(query, event_types: list[str]):
@@ -62,19 +62,30 @@ def _parse_datetime(value: str | None) -> datetime | None:
 
 
 def retrieve_memory_units(
-    profile_id: str, keywords: list[str], event_types: list[str], top_k: int
+        profile_id: str, keywords: list[str], event_types: list[str] | None = None, top_k: int = 10
 ) -> list[RetrievedMemory]:
+    """
+    Retrieve memory units with optional event type filtering.
+
+    Args:
+        profile_id: User profile identifier
+        keywords: List of keywords to search for
+        event_types: Optional list of event types to filter by
+        top_k: Number of top results to return
+    """
+    event_types = event_types or []
+
     query = (
         supabase.table("memory_units")
         .select(
-            "id, title, summary, description, keywords_array, event_type, places, dates, "  # Changed keywords to keywords_array
+            "id, title, summary, description, keywords_array, event_type, places, dates, "
             "media_assets(file_name, mime_type)"
         )
         .eq("profile_id", profile_id)
     )
 
     query = _apply_text_search(query, keywords)
-    query = _apply_keyword_overlap(query, keywords)  # This function also needs updating
+    query = _apply_keyword_overlap(query, keywords)
     query = _apply_event_type_filter(query, event_types)
 
     response = query.execute()
@@ -98,7 +109,7 @@ def retrieve_memory_units(
                 event_type=row.get("event_type"),
                 places=row.get("places") or [],
                 dates=row.get("dates") or [],
-                keywords=row.get("keywords_array") or [],  # Changed keywords to keywords_array
+                keywords_array=row.get("keywords_array") or [],
                 asset_key=media_asset.get("file_name"),
                 asset_mime_type=media_asset.get("mime_type"),
             )
@@ -109,7 +120,7 @@ def retrieve_memory_units(
             filter(None, [memory.title, memory.summary, memory.description])
         ).lower()
         keyword_hits = sum(text_blob.count(keyword.lower()) for keyword in keywords)
-        keyword_hits += len(set(memory.keywords) & set(keywords)) * 2
+        keyword_hits += len(set(memory.keywords_array) & set(keywords)) * 2
         return keyword_hits
 
     retrieved.sort(key=score_memory, reverse=True)

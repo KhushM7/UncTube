@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+# Question-answering prompts
 SYSTEM_PROMPT = """You are a grounded assistant. Answer using ONLY the provided context pack.
 - If the answer is not contained in the context, say you do not know.
 - Do not invent facts.
@@ -12,3 +15,59 @@ Context pack (JSON):
 Return a JSON object with:
 - answer_text: string
 """
+
+# Extraction configuration
+EVENT_TYPES = [
+    "BirthChildhood",
+    "School",
+    "Graduation",
+    "Career",
+    "MovingMigration",
+    "Relationship",
+    "Marriage",
+    "ChildrenFamily",
+    "Travel",
+    "TraditionHoliday",
+    "AdviceValues",
+    "FunnyAnecdote",
+    "LossGrief",
+    "Health",
+    "HistoricalWitness",
+    "HobbyPassion",
+    "Other",
+]
+
+
+def system_instruction() -> str:
+    """System instruction for extraction tasks."""
+    return (
+        "You are a careful data extraction system. "
+        "Only use facts visible or clearly stated in the provided content. "
+        "Do not infer details that are not present. "
+        "Return only JSON with no extra text."
+    )
+
+
+def build_extraction_prompt(modality: str) -> str:
+    """Build extraction prompt based on content modality."""
+    modality = modality.lower()
+    # Keep modality rules compact but explicit to reduce retries.
+    modality_rules = ""
+    if modality == "image":
+        modality_rules = "Return exactly 1 memory_unit."
+
+    return (
+        "Extract grounded memory units for the database.\n"
+        f"Modality: {modality}.\n"
+        "Rules:\n"
+        "- No invented facts. Only use what is present or strongly implied.\n"
+        f"- {modality_rules}\n"
+        "- places and dates must be non-empty arrays; use 'unknown' or 'unspecified' if missing.\n"
+        "- event_type must be one of: "
+        + ", ".join(EVENT_TYPES)
+        + ".\n"
+        "- Add useful keywords/tags for retrieval (short phrases). Use keywords_array.\n"
+        "Return JSON ONLY:\n"
+        '{\"memory_units\":[{\"title\":\"\",\"summary\":\"\",\"description\":null,'
+        '\"event_type\":\"Other\",\"places\":[\"\"],\"dates\":[\"\"],\"keywords_array\":[]}]}'
+    )

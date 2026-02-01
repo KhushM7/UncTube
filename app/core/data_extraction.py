@@ -7,12 +7,13 @@ from uuid import uuid4
 
 import boto3
 import httpx
+import io
 from botocore.exceptions import ClientError
 from fastapi import HTTPException, status
 
-from app.core.settings import settings
+from core.settings import settings
 
-MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
 SUPPORTED_MIME_TYPES = {
     "video/mp4",
@@ -86,7 +87,7 @@ def validate_upload_size(bytes_size: int) -> None:
     if bytes_size > MAX_UPLOAD_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File exceeds 500 MB limit ({bytes_size} bytes)",
+            detail=f"File exceeds 100 MB limit ({bytes_size} bytes)",
         )
 
 
@@ -104,10 +105,9 @@ def validate_file_type(file_name: str, mime_type: str) -> None:
         )
 
 
-def build_object_key(profile_id: str, file_name: str) -> str:
+def build_object_key(profile_id: str, file_name: str, object_id: str) -> str:
     safe_name = Path(file_name).name
-    token = uuid4().hex
-    return f"profiles/{profile_id}/{token}_{safe_name}"
+    return f"profiles/{profile_id}/{profile_id}_{object_id}_{safe_name}"
 
 
 def create_presigned_upload_url(object_key: str, mime_type: str) -> str:
@@ -130,6 +130,36 @@ def create_presigned_upload_url(object_key: str, mime_type: str) -> str:
         ) from exc
 
 
+def create_presigned_download_url(object_key: str) -> str:
+    """
+    returns a presigned URL to download an object from S3
+    """
+    client = _s3_client()
+    bucket = _require_setting(settings.AWS_S3_BUCKET, "AWS_S3_BUCKET")
+    try:
+        return client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": bucket,
+                "Key": object_key,
+            },
+            ExpiresIn=3600,
+        )
+    except ClientError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create download URL",
+        ) from exc
+
+
+def build_public_url(object_key: str) -> str:
+    base = settings.AWS_S3_PUBLIC_BASE_URL
+    if not base:
+        return ""
+    base = base.rstrip("/")
+    if not base.startswith(("http://", "https://")):
+        base = f"https://{base}"
+    return f"{base}/{object_key}"
 def head_object(object_key: str) -> UploadHead:
     client = _s3_client()
     bucket = _require_setting(settings.AWS_S3_BUCKET, "AWS_S3_BUCKET")
@@ -166,6 +196,18 @@ def get_object_bytes(object_key: str) -> bytes:
     if not body:
         return b""
     return body.read()
+
+
+def download_object_to_path(object_key: str, destination: str) -> None:
+    client = _s3_client()
+    bucket = _require_setting(settings.AWS_S3_BUCKET, "AWS_S3_BUCKET")
+    try:
+        client.download_file(bucket, object_key, destination)
+    except ClientError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to download uploaded object",
+        ) from exc
 
 
 def delete_object(object_key: str) -> None:
