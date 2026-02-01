@@ -29,9 +29,6 @@ class ElevenLabsService:
 
         Supports multiple SDK versions by checking available methods.
         """
-        if not Config.ELEVENLABS_API_KEY:
-            raise ValueError("ELEVENLABS_API_KEY is required to clone voices.")
-
         voices = getattr(self.client, "voices", None)
 
         if voices and hasattr(voices, "add"):
@@ -43,24 +40,10 @@ class ElevenLabsService:
         if hasattr(self.client, "clone_voice"):
             return self.client.clone_voice(name=voice_name, files=files, description=description)
 
-        response = requests.post(
-            "https://api.elevenlabs.io/v1/voices/add",
-            headers={"xi-api-key": Config.ELEVENLABS_API_KEY},
-            data={"name": voice_name, "description": description},
-            files=[("files", (file.name, file, "application/octet-stream")) for file in files],
-            timeout=60,
+        raise AttributeError(
+            "ElevenLabs SDK does not expose a voice cloning method. "
+            "Ensure the elevenlabs package is installed and up to date."
         )
-        if not response.ok:
-            raise RuntimeError(
-                f"ElevenLabs voice clone failed: {response.status_code} {response.text}"
-            )
-
-        payload = response.json()
-        voice_id = payload.get("voice_id")
-        if not voice_id:
-            raise ValueError("ElevenLabs voice clone succeeded but no voice_id was returned.")
-
-        return SimpleNamespace(voice_id=voice_id)
 
     def clone_voice_from_bytes(self, voice_name: str, audio_data_list: list, description: str = "") -> str:
         """
