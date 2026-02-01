@@ -53,7 +53,7 @@ class MemoryUnitOut(BaseModel):
     event_type: Optional[str] = None
     places: Optional[List[str]] = None  # Made optional from File 2
     dates: Optional[List[str]] = None  # Made optional from File 2
-    keywords_array: List[str]
+    keywords: List[str]
 
 
 class MemoryUnitUpdateRequest(BaseModel):
@@ -94,7 +94,7 @@ class RetrievedMemory(BaseModel):
     places: list[str] = Field(default_factory=list)  # Kept from File 1
     dates: list[str] = Field(default_factory=list)  # Kept from File 1
     keywords: list[str] = Field(default_factory=list)  # Kept from File 1
-    keywords_array: list[str] = Field(default_factory=list)  # Added from File 2
+    keywords: list[str] = Field(default_factory=list)  # Added from File 2
     asset_key: str | None = None  # Kept from File 1
     asset_mime_type: str | None = None  # Kept from File 1
 

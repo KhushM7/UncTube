@@ -16,6 +16,7 @@ from app.core.data_extraction import (
     MAX_UPLOAD_BYTES,
     SUPPORTED_MIME_TYPES,
     delete_object,
+    get_object_bytes,
     download_object_to_path,
     head_object,
     supabase_insert,
@@ -212,7 +213,6 @@ class ExtractionWorker:
                     temp_path.unlink(missing_ok=True)
                 except Exception:
                     LOGGER.warning("Failed to delete temp file %s", temp_path)
-
         units = client.extract_from_text(content, "text")
         return self._build_results(media_asset, units)
 
@@ -274,7 +274,7 @@ class ExtractionWorker:
                     "event_type": unit.event_type,
                     "places": unit.places,
                     "dates": unit.dates,
-                    "keywords_array": unit.keywords_array,
+                    "keywords": unit.keywords,
                 }
             )
         return ExtractionResult(memory_units=memory_units)

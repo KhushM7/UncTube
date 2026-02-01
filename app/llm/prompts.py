@@ -66,8 +66,8 @@ def build_extraction_prompt(modality: str) -> str:
         "- event_type must be one of: "
         + ", ".join(EVENT_TYPES)
         + ".\n"
-        "- Add useful keywords/tags for retrieval (short phrases). Use keywords_array.\n"
+        "- Add useful keywords/tags for retrieval (short phrases). Use keywords.\n"
         "Return JSON ONLY:\n"
         '{\"memory_units\":[{\"title\":\"\",\"summary\":\"\",\"description\":null,'
-        '\"event_type\":\"Other\",\"places\":[\"\"],\"dates\":[\"\"],\"keywords_array\":[]}]}'
+        '\"event_type\":\"Other\",\"places\":[\"\"],\"dates\":[\"\"],\"keywords\":[]}]}'
     )

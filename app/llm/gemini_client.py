@@ -34,7 +34,7 @@ class ExtractedUnit:
     event_type: str
     places: List[str]
     dates: List[str]
-    keywords_array: List[str]
+    keywords: List[str]
 
 
 class GeminiClient:
@@ -251,7 +251,7 @@ def _parse_units(payload: Dict[str, Any]) -> List[ExtractedUnit]:
                 event_type=str(item.get("event_type") or "Other").strip(),
                 places=_ensure_list(item.get("places")),
                 dates=_ensure_list(item.get("dates")),
-                keywords_array=_ensure_list(item.get("keywords_array")),
+                keywords=_ensure_list(item.get("keywords")),
             )
         )
     return units
@@ -267,7 +267,7 @@ def _normalize_units(units: List[ExtractedUnit], modality: str) -> List[Extracte
         event_type = unit.event_type if unit.event_type in EVENT_TYPES else "Other"
         places = unit.places or ["unknown"]
         dates = unit.dates or ["unspecified"]
-        keywords = unit.keywords_array or []
+        keywords = unit.keywords or []
 
         normalized.append(
             ExtractedUnit(
@@ -277,7 +277,7 @@ def _normalize_units(units: List[ExtractedUnit], modality: str) -> List[Extracte
                 event_type=event_type,
                 places=places,
                 dates=dates,
-                keywords_array=keywords,
+                keywords=keywords,
             )
         )
 

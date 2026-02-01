@@ -36,9 +36,9 @@ def _apply_keyword_overlap(query, keywords: list[str]):
         return query
     keyword_set = ",".join(keywords)
     try:
-        return query.or_(f"keywords_array.cs.{{{keyword_set}}}")
+        return query.or_(f"keywords.cs.{{{keyword_set}}}")
     except Exception:
-        return query.contains("keywords_array", keywords)
+        return query.contains("keywords", keywords)
 
 
 def _apply_event_type_filter(query, event_types: list[str]):
@@ -78,7 +78,7 @@ def retrieve_memory_units(
     query = (
         supabase.table("memory_units")
         .select(
-            "id, title, summary, description, keywords_array, event_type, places, dates, "
+            "id, title, summary, description, keywords, event_type, places, dates, "
             "media_assets(file_name, mime_type)"
         )
         .eq("profile_id", profile_id)
@@ -109,7 +109,7 @@ def retrieve_memory_units(
                 event_type=row.get("event_type"),
                 places=row.get("places") or [],
                 dates=row.get("dates") or [],
-                keywords_array=row.get("keywords_array") or [],
+                keywords=row.get("keywords") or [],
                 asset_key=media_asset.get("file_name"),
                 asset_mime_type=media_asset.get("mime_type"),
             )
@@ -120,7 +120,7 @@ def retrieve_memory_units(
             filter(None, [memory.title, memory.summary, memory.description])
         ).lower()
         keyword_hits = sum(text_blob.count(keyword.lower()) for keyword in keywords)
-        keyword_hits += len(set(memory.keywords_array) & set(keywords)) * 2
+        keyword_hits += len(set(memory.keywords) & set(keywords)) * 2
         return keyword_hits
 
     retrieved.sort(key=score_memory, reverse=True)
